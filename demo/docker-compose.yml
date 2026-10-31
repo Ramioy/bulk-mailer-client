@@ -1,0 +1,108 @@
+# Local demo of the whole flow: PostgreSQL, the simulators of Tayrona, SAP and ZeptoMail, the backend in production
+# mode (TLS self-signed, restricted database role) and the web client behind nginx. Started by demo/up.sh.
+name: bulk-mailer-demo
+
+x-backend: &backend
+  image: bulk-mailer-demo-backend
+  build:
+    context: ${BACKEND_DIR}
+    dockerfile: ${DEMO_DIR}/backend.Dockerfile
+  env_file: ${DEMO_DIR}/.env
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: bulk_mailer
+      POSTGRES_USER: bulk_mailer
+      POSTGRES_PASSWORD: ${OWNER_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bulk_mailer -d bulk_mailer"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  tayrona:
+    <<: *backend
+    command: ["node", "mocks/contracts-api.ts"]
+    environment: { HOST: 0.0.0.0, PORT: "4001", MOCK_CONTRACTS_FILE: /demo/contracts-tayrona.json, MOCK_TOKEN: "${TAYRONA_API_TOKEN}" }
+    volumes: ["${DEMO_DIR}:/demo:ro"]
+
+  sap:
+    <<: *backend
+    command: ["node", "mocks/contracts-api.ts"]
+    environment: { HOST: 0.0.0.0, PORT: "4001", MOCK_CONTRACTS_FILE: /demo/contracts-sap.json, MOCK_TOKEN: "${SAP_API_TOKEN}" }
+    volumes: ["${DEMO_DIR}:/demo:ro"]
+
+  zeptomail:
+    <<: *backend
+    command: ["node", "mocks/zeptomail-api.ts"]
+    environment:
+      HOST: 0.0.0.0
+      PORT: "4002"
+      MOCK_API_KEY: "${ZEPTOMAIL_API_KEY}"
+      MOCK_VERIFIED_DOMAINS: anutibara.com
+      MOCK_OAUTH_TOKEN: "${ZEPTO_OAUTH_TOKEN}"
+      MOCK_OAUTH_CLIENT_ID: "${ZOHO_OAUTH_CLIENT_ID}"
+      MOCK_OAUTH_CLIENT_SECRET: "${ZOHO_OAUTH_CLIENT_SECRET}"
+      MOCK_OAUTH_REFRESH_TOKEN: "${ZOHO_OAUTH_REFRESH_TOKEN}"
+      MOCK_WEBHOOK_URL: https://app:3443/webhooks/zeptomail
+      MOCK_WEBHOOK_KEY: "${ZEPTOMAIL_WEBHOOK_KEY}"
+      MOCK_WEBHOOK_AUTH_NAME: authorization
+      MOCK_WEBHOOK_AUTH_VALUE: "${ZEPTOMAIL_WEBHOOK_AUTHORIZATION}"
+      MOCK_EVENT_DELAY_MS: "1000"
+      MOCK_EVENT_DELAY_MAX_MS: "5000"
+      NODE_EXTRA_CA_CERTS: /demo/tls/cert.pem
+    volumes: ["${DEMO_DIR}:/demo:ro"]
+
+  provision:
+    <<: *backend
+    command: ["sh", "-c", "node dist/adapters/outbound/postgres/migrate.js && node /demo/provision.mjs"]
+    environment:
+      NODE_ENV: development
+      DATA_DIR: /tmp/data
+      DATABASE_URL: postgres://bulk_mailer:${OWNER_DB_PASSWORD}@postgres:5432/bulk_mailer
+      OWNER_DATABASE_URL: postgres://bulk_mailer:${OWNER_DB_PASSWORD}@postgres:5432/bulk_mailer
+    volumes: ["${DEMO_DIR}:/demo:ro"]
+    depends_on: { postgres: { condition: service_healthy } }
+
+  app:
+    <<: *backend
+    command: ["node", "dist/main.js"]
+    stop_grace_period: 40s
+    environment:
+      PORT: "3443"
+      DATA_DIR: /data
+      DATABASE_URL: postgres://bulk_mailer_app:${APP_DB_PASSWORD}@postgres:5432/bulk_mailer
+      TLS_CERT_FILE: /demo/tls/cert.pem
+      TLS_KEY_FILE: /demo/tls/key.pem
+      CORS_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-8080}
+      CONTRACT_SOURCE: http
+      TAYRONA_API_URL: http://tayrona:4001
+      SAP_API_URL: http://sap:4001
+      EMAIL_PROVIDER: zeptomail
+      ZEPTOMAIL_BASE_URL: http://zeptomail:4002/v1.1
+      ZOHO_ACCOUNTS_URL: http://zeptomail:4002
+      ZEPTOMAIL_FROM_ADDRESS: soportes@anutibara.com
+      ARCHIVE_COPY_ADDRESS: archivo@anutibara.com
+      SEND_PAUSE_MS: "1000"
+      RECONCILE_DELAYS_MINUTES: "1,2,3"
+      DELIVERY_CHECK_TAIL_MINUTES: "3"
+      EXECUTION_ABORT_AFTER_MINUTES: "1"
+    volumes: ["${DEMO_DIR}:/demo:ro", "appdata:/data"]
+    depends_on:
+      provision: { condition: service_completed_successfully }
+      tayrona: { condition: service_started }
+      sap: { condition: service_started }
+      zeptomail: { condition: service_started }
+
+  web:
+    image: bulk-mailer-demo-web
+    build:
+      context: ${CLIENT_DIR}
+      dockerfile: demo/web.Dockerfile
+    ports: ["${WEB_PORT:-8080}:80"]
+    depends_on: { app: { condition: service_started } }
+
+volumes:
+  appdata:

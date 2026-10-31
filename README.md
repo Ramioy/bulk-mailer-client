@@ -37,6 +37,34 @@ src/main.tsx            único punto de composición (crea el adaptador HTTP)
 
 En la cabecera, el indicador de `/health` y `/instance` (instancia principal o en espera, D47).
 
+## Demo local completa (`demo/`)
+
+Toda la pila en Docker, para probar el flujo a mano desde el navegador: PostgreSQL, los simuladores de Tayrona, SAP y ZeptoMail del backend (`mocks/`), el backend en modo producción (TLS autofirmado, rol de base de datos restringido) y este cliente servido por nginx, que reenvía `/api` al backend en el mismo origen.
+
+Requisitos: Docker con Compose v2, git, openssl y curl. El backend se clona al lado de este repositorio (o se indica con `BACKEND_DIR`), en `main` desde el commit `fbc450d` (los simuladores escuchan en `HOST`).
+
+```bash
+git clone https://github.com/Ramioy/bulk-mailer-backend.git
+```
+
+```bash
+git clone https://github.com/Ramioy/bulk-mailer-client.git
+```
+
+```bash
+cd bulk-mailer-client && ./demo/up.sh
+```
+
+Al terminar imprime la URL (`http://localhost:8080`, cambiable con `WEB_PORT`) y el usuario y la contraseña del operador, que quedan en `demo/.env` (no se versiona). Para detenerla y borrar sus datos:
+
+```bash
+./demo/down.sh
+```
+
+Los contratos de prueba están en `demo/contracts-tayrona.json` (bloques de Tayrona) y `demo/contracts-sap.json` (bloque `ANGLO`). El escenario de entrega va en la dirección del contrato: `100004` rebota duro y suprime la dirección, `100005` rebota blando, `100006` genera una queja, `100007` pierde la respuesta del proveedor (queda incierto y la conciliación lo confirma al minuto), `100008` lo rechaza el proveedor (`SM_113`), `100009` está inactivo y `100010` no tiene correo. Un PDF cualquiera sirve (basta con que empiece por `%PDF-`); el nombre debe seguir la regla del backend, por ejemplo `Conjunto Altos CNCPT MULTA CNTRT 100001.pdf`.
+
+Comprobado el 2026-10-31 por la API (carga, ejecución, rebote duro con alerta, respuesta perdida conciliada, historial del soporte y CORS del SSE); el contenedor de nginx no pudo construirse en el entorno de esa comprobación por un límite de descarga de imágenes, así que su configuración (`demo/nginx.conf`) queda por confirmar en la primera ejecución local.
+
 ## Uso
 
 ```bash

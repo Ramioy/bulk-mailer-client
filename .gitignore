@@ -7,3 +7,7 @@ playwright-report/
 .env.local
 *.log
 backend/
+
+# local demo secrets and certificate
+demo/.env
+demo/tls/

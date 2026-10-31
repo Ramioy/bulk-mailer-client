@@ -1,0 +1,12 @@
+{
+  "100001": { "activo": true, "nombre_conjunto": "Conjunto Altos", "correo": "altos@clientes.demo" },
+  "100002": { "activo": true, "nombre_conjunto": "Conjunto Palmas", "correo": "palmas@clientes.demo" },
+  "100003": { "activo": true, "nombre_conjunto": "Conjunto Robles", "correo": "robles@clientes.demo" },
+  "100004": { "activo": true, "nombre_conjunto": "Conjunto Cedros (rebote duro)", "correo": "cedros+zm-hardbounce@clientes.demo" },
+  "100005": { "activo": true, "nombre_conjunto": "Conjunto Pinos (rebote blando)", "correo": "pinos+zm-softbounce@clientes.demo" },
+  "100006": { "activo": true, "nombre_conjunto": "Conjunto Ceibas (queja)", "correo": "ceibas+zm-complaint@clientes.demo" },
+  "100007": { "activo": true, "nombre_conjunto": "Conjunto Laureles (respuesta perdida)", "correo": "laureles+zm-timeout@clientes.demo" },
+  "100008": { "activo": true, "nombre_conjunto": "Conjunto Guaduales (rechazado SM_113)", "correo": "guaduales+zm-SM_113@clientes.demo" },
+  "100009": { "activo": false, "nombre_conjunto": "Conjunto Inactivo", "correo": "inactivo@clientes.demo" },
+  "100010": { "activo": true, "nombre_conjunto": "Conjunto Sin Correo", "correo": null }
+}
