@@ -1,5 +1,5 @@
 {
-  "name": "bulk-mailer-frontend",
+  "name": "bulk-mailer-client",
   "version": "0.1.0",
   "private": true,
   "description": "Bulk Mailer web client: operator interface for the Bulk Mailer backend",
