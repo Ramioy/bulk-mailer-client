@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import", "react", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "no-console": "error",
+    "typescript/no-explicit-any": "error",
+    "import/no-cycle": "error",
+    "react/react-in-jsx-scope": "off",
+    "import/no-unassigned-import": ["warn", { "allow": ["**/*.css"] }],
+    "no-restricted-globals": ["error", { "name": "fetch", "message": "Only src/api/http may call fetch: use the ports in src/api/ports.ts" }, { "name": "EventSource", "message": "SSE goes through fetch with Authorization: Bearer (D12)" }]
+  },
+  "overrides": [
+    {
+      "files": ["src/api/http/**", "e2e/**"],
+      "rules": { "no-restricted-globals": "off" }
+    }
+  ]
+}
